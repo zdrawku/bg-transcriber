@@ -52,9 +52,7 @@ function transcribeWithWhisper(audioPath) {
     console.log("[*] Transcribing audio with local Whisper...");
     const transcription = await transcribeWithWhisper(OUTPUT_AUDIO);
 
-    console.log("\n[✔] Bulgarian Transcription:\n");
-    console.log(transcription);
-
+    console.log("\n[✔] Bulgarian Transcription is being saved... \n");
     fs.writeFileSync(TRANSCRIPTION_FILE, transcription, "utf8");
     console.log("\n[✔] Saved to transcription_bg.txt");
 
