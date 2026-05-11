@@ -1,10 +1,17 @@
-import whisper
+import os
 import sys
 
-model = whisper.load_model("small")  # or tiny, base, medium, large
-result = model.transcribe(sys.argv[1], language="bg")
+# Prepend bundled ffmpeg dir to PATH so Whisper's internal load_audio can find it
+ffmpeg_bin_dir = os.environ.get("FFMPEG_BIN_DIR")
+if ffmpeg_bin_dir:
+    os.environ["PATH"] = ffmpeg_bin_dir + os.pathsep + os.environ.get("PATH", "")
 
-with open("transcription_bg.txt", "w", encoding="utf-8") as f:
-    f.write(result["text"])
+import whisper
 
-print("Transcription saved to transcription_bg.txt")
+audio_path = sys.argv[1]
+model_name = sys.argv[2] if len(sys.argv) > 2 else "small"
+
+model = whisper.load_model(model_name)
+result = model.transcribe(audio_path, language="bg")
+
+print(result["text"])

@@ -12,20 +12,15 @@ A Node.js application that extracts audio from video files and transcribes them 
 
 ## Prerequisites
 
-Before running this application, ensure you have the following installed:
-
-### Required Software
-
 1. **Node.js** - Download from [nodejs.org](https://nodejs.org/)
 2. **Python** - Download from [python.org](https://www.python.org/)
-3. **FFmpeg** - Download from [ffmpeg.org](https://ffmpeg.org/)
-4. **OpenAI Whisper** - Install via pip
+   - FFmpeg is bundled automatically via `ffmpeg-static` — no manual install needed
 
-### Installation Steps
+## Installation
 
 1. **Install Python dependencies:**
    ```bash
-   py -m pip install -U openai-whisper
+   py -m pip install -r requirements.txt
    ```
 
 2. **Install Node.js dependencies:**
@@ -33,43 +28,55 @@ Before running this application, ensure you have the following installed:
    npm install
    ```
 
-3. **Install FFmpeg:**
-   - Download FFmpeg and note the installation path
-   - Update the `ffmpeg.setFfmpegPath()` in the code with your FFmpeg path
+3. **Configure your environment:**
+   ```bash
+   cp .env.example .env
+   ```
+   Then edit `.env` and set `INPUT_FOLDER` to the folder containing your audio files.
 
 ## Configuration
 
-1. **FFmpeg Path**: Update the FFmpeg path in `transcribeAudio.js`:
-   ```javascript
-   ffmpeg.setFfmpegPath('YOUR_FFMPEG_PATH_HERE');
-   ```
+All configuration is done via the `.env` file (copy from `.env.example`):
 
-2. **Input File**: Update the input video file name:
-   ```javascript
-   const INPUT_VIDEO = "your_video_file.mp4";
-   ```
+```env
+# Path to the folder containing your audio files
+INPUT_FOLDER=some_path
+
+# Whisper model size: tiny, base, small, medium, large
+# Larger models are more accurate but slower
+WHISPER_MODEL=large
+```
 
 ## Usage
 
-1. Place your video file in the project directory
-2. Update the `INPUT_VIDEO` constant with your video file name
-3. Run the application:
-   ```bash
-   node transcribeAudio.js
-   ```
+Run against the folder configured in `.env`:
+
+```bash
+npm start
+```
+
+Or pass the folder path directly as an argument (overrides `.env`):
+
+```bash
+node transcribeAudio.js "your_folder_with_files_here"
+```
 
 ## How It Works
 
-1. **Audio Extraction**: Uses FFmpeg to extract audio from the video file
-   - Converts to WAV format
-   - Sets to mono channel
-   - Optimizes to 16kHz sample rate
+1. **Folder Scan**: Reads all supported audio/video files from `INPUT_FOLDER`
+   - Supported formats: `.m4a`, `.mp3`, `.mp4`, `.wav`, `.ogg`, `.flac`, `.aac`
+   - Files that already have a matching `.txt` transcript are skipped automatically
 
-2. **Transcription**: Uses local Whisper installation to transcribe the audio
+2. **Audio Conversion**: Uses FFmpeg (bundled via `ffmpeg-static`) to convert each file to a temporary WAV
+   - Mono channel, 16kHz sample rate — optimal for Whisper
+   - Temp file is deleted after transcription
+
+3. **Transcription**: Calls `transcribe.py` which runs the local Whisper model
    - Specifically configured for Bulgarian language
-   - Processes the audio through Python script
+   - Model size is configurable via `WHISPER_MODEL`
 
-3. **Output**: Saves the transcription to `transcription_bg.txt`
+4. **Output**: Each audio file gets a matching `.txt` transcript saved in the same folder
+   - e.g. `session1.m4a` → `session1.txt`
 
 ## File Structure
 
@@ -78,58 +85,63 @@ bg-transcriber/
 ├── transcribeAudio.js          # Main application file
 ├── transcribe.py               # Python script for Whisper transcription
 ├── package.json                # Node.js dependencies
-├── README.md                   # This file
-├── your_video_file.mp4         # Input video file
-└── transcription_bg.txt        # Output transcription (generated)
+├── requirements.txt            # Python dependencies
+├── .env.example                # Environment variable template
+├── .env                        # Your local config (not committed)
+└── README.md                   # This file
+
+# Transcripts are saved alongside the source audio files:
+D:\folder\folder\
+├── session1.m4a
+├── session1.txt                # generated transcript
+├── session2.m4a
+└── session2.txt                # generated transcript
 ```
 
 ## Dependencies
 
 ### Node.js Packages
 - `fluent-ffmpeg` - FFmpeg wrapper for Node.js
+- `ffmpeg-static` - Bundled FFmpeg binary (no system install required)
 - `dotenv` - Environment variable management
-- `axios` - HTTP client (for future API integrations)
-- `form-data` - Form data handling
-- `openai` - OpenAI API client (for future cloud integrations)
 
 ### Python Packages
 - `openai-whisper` - OpenAI's Whisper speech-to-text model
 
 ## Example Output
 
-The application will display progress and results in the console:
-
 ```
-[*] Extracting audio...
-[*] Transcribing audio with local Whisper...
+[*] Found 3 file(s) in: D:\folder\folder
 
-[✔] Bulgarian Transcription:
+── session1.m4a
+  [*] Converting: session1.m4a
+  [*] Transcribing...
+  [✔] Saved: session1.txt
 
-Your transcribed text will appear here...
+── session2.m4a
+  [skip] session2.txt already exists
 
-[✔] Saved to transcription_bg.txt
+── session3.m4a
+  [*] Converting: session3.m4a
+  [*] Transcribing...
+  [✔] Saved: session3.txt
+
+[✔] Done. 2 succeeded, 0 failed.
 ```
 
 ## Troubleshooting
 
-### Common Issues
-
-1. **FFmpeg not found**: Ensure FFmpeg is installed and the path is correctly set
-2. **Python not found**: Ensure Python is installed and accessible via `py` command
-3. **Whisper not installed**: Run `py -m pip install -U openai-whisper`
-4. **Video file not found**: Ensure the video file exists in the project directory
-
-### Error Messages
-
-- `Error: Cannot find FFmpeg`: Update the FFmpeg path in the code
-- `Error: Python script failed`: Check Python and Whisper installation
-- `Error: No such file or directory`: Verify input video file exists
+1. **Python not found**: Ensure Python is installed and accessible via `py` command
+2. **Whisper not installed**: Run `py -m pip install -r requirements.txt`
+3. **Folder not found**: Verify `INPUT_FOLDER` is set correctly in `.env`
+4. **No files found**: Check that the folder contains supported audio formats (`.m4a`, `.mp3`, `.mp4`, etc.)
+5. **Slow transcription**: Try a smaller model (`WHISPER_MODEL=tiny` or `base`) in `.env`
 
 ## Alternative Usage
 
 For direct Whisper usage without Node.js:
 ```bash
-whisper path\to\your\audio.wav --language bg
+whisper path\to\your\audio.wav --language bg --model small
 ```
 
 ## License
